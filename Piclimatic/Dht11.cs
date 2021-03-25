@@ -83,7 +83,7 @@ namespace Piclimatic
 			//delayMicroseconds(40);
 			Thread.Sleep(new TimeSpan(400));
 			//pinMode(DHT11PIN, INPUT);
-			controller.OpenPin(DHT11PIN, PinMode.Input);
+			controller.SetPinMode(DHT11PIN, PinMode.Input);
 
 
 			// ***
@@ -137,6 +137,7 @@ namespace Piclimatic
 			{
 				farenheit = dht11_val[2] * 9.0 / 5.0 + 32;
 				//printf("Humidity = %d.%d %% Temperature = %d.%d *C (%.1f *F)\n", dht11_val[0], dht11_val[1], dht11_val[2], dht11_val[3], farenheit);
+				Console.WriteLine(string.Join(",", dht11_val));
 				Console.WriteLine($"H = {dht11_val[0]}.{dht11_val[1]}, T = {dht11_val[2]}.{dht11_val[3]}");
 
 				returnValue = 1;
