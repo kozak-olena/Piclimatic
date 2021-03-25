@@ -37,7 +37,7 @@ namespace Piclimatic
 		const int DHT11PIN = 4;
 		const int DELAY_TIME = 500;
 
-		int[] dht11_val = { 0, 0, 0, 0, 0 };
+		
 
 		int dht11_read_val()
 		{
@@ -55,10 +55,7 @@ namespace Piclimatic
 			// ***
 			// *** Initialize the values
 			// ***
-			for (var i = 0; i < 5; i++)
-			{
-				dht11_val[i] = 0;
-			}
+			int[] dht11_val = { 0, 0, 0, 0, 0 };
 
 			// ***
 			// *** Signal the sensor to send data
@@ -81,7 +78,7 @@ namespace Piclimatic
 			//digitalWrite(DHT11PIN, HIGH);
 			controller.Write(DHT11PIN, PinValue.High);
 			//delayMicroseconds(40);
-			Thread.Sleep(new TimeSpan(400));
+			Thread.Sleep(new TimeSpan(300));
 			//pinMode(DHT11PIN, INPUT);
 			controller.SetPinMode(DHT11PIN, PinMode.Input);
 
@@ -102,6 +99,7 @@ namespace Piclimatic
 
 					if (counter == 255)
 					{
+						Console.WriteLine("Failed to get HIGH after ~255 microseconds");
 						break;
 					}
 				}
