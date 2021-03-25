@@ -29,7 +29,7 @@ namespace Piclimatic
 
                 if (dht11.IsLastReadSuccessful)
                 {
-                    Console.WriteLine($"H = {dht11.Humidity}, T = {dht11.Temperature}");
+                    Console.WriteLine($"H = {humidity}, T = {temperature}");
                 }
                 else
                 {
