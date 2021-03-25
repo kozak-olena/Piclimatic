@@ -24,7 +24,18 @@ namespace Piclimatic
 
             for (var i = 0; i < 10; i++)
             {
-                Console.WriteLine($"H = {dht11.Humidity}, T = {dht11.Temperature}");
+                var humidity = dht11.Humidity;
+                var temperature = dht11.Temperature;
+
+                if (dht11.IsLastReadSuccessful)
+                {
+                    Console.WriteLine($"H = {dht11.Humidity}, T = {dht11.Temperature}");
+                }
+                else
+                {
+                    Console.WriteLine("Read failed.");
+                }
+
                 Thread.Sleep(2000);
             }
         }
