@@ -2,6 +2,8 @@
 using System.Device.Gpio;
 using System.Threading;
 
+using Iot.Device.DHTxx;
+
 namespace Piclimatic
 {
     class Program
@@ -18,7 +20,13 @@ namespace Piclimatic
             //Thread.Sleep(1000);
             //controller.Write(pin, PinValue.Low);
             //Thread.Sleep(1000);
-            new Dht11().main();
+            using var dht11 = new Dht11(4);
+
+            for (var i = 0; i < 10; i++)
+            {
+                Console.WriteLine($"H = {dht11.Humidity}, T = {dht11.Temperature}");
+                Thread.Sleep(2000);
+            }
         }
     }
 }
