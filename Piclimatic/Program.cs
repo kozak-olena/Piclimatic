@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Device.Gpio;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Iot.Device.DHTxx;
 
@@ -8,36 +9,70 @@ namespace Piclimatic
 {
     class Program
     {
-        static void Main(string[] args)
+        private static CancellationToken CancellationToken;
+
+        static async Task Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Piclimatic Started");
 
-            //int pin = 37;
-            //using var controller = new GpioController();
-            //controller.OpenPin(pin, PinMode.Output);
-            //
-            //controller.Write(pin, PinValue.High);
-            //Thread.Sleep(1000);
-            //controller.Write(pin, PinValue.Low);
-            //Thread.Sleep(1000);
-            using var dht11 = new Dht11(4);
+            var cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken = cancellationTokenSource.Token;
 
-            for (var i = 0; i < 10; i++)
+            var dht11PollTask = PollDht11Continuously();
+
+            Console.WriteLine("Press Q to stop");
+            do
             {
-                var humidity = dht11.Humidity;
-                var temperature = dht11.Temperature;
-
-                if (dht11.IsLastReadSuccessful)
+                while (!Console.KeyAvailable)
                 {
-                    Console.WriteLine($"H = {humidity}, T = {temperature}");
+                    await Task.Delay(50);
                 }
-                else
-                {
-                    Console.WriteLine("Read failed.");
-                }
+            } while (Console.ReadKey(true).Key != ConsoleKey.Q);
 
-                Thread.Sleep(2000);
+            cancellationTokenSource.Cancel();
+
+            await dht11PollTask;
+        }
+
+        private static async Task PollDht11Continuously()
+        {
+            try
+            {
+                using var dht11 = new Dht11(4);
+
+                while (!CancellationToken.IsCancellationRequested)
+                {
+                    var humidity = dht11.Humidity;
+                    var temperature = dht11.Temperature;
+
+                    if (dht11.IsLastReadSuccessful)
+                    {
+                        Console.WriteLine($"H = {humidity}, T = {temperature}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Read failed.");
+                    }
+
+                    await Task.Delay(2000);
+                }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+
+        private static void RelayDemo()
+        {
+            var pin = 26;
+            using var controller = new GpioController();
+            controller.OpenPin(pin, PinMode.Output);
+
+            controller.Write(pin, PinValue.High);
+            Thread.Sleep(1000);
+            controller.Write(pin, PinValue.Low);
+            Thread.Sleep(1000);
         }
     }
 }
