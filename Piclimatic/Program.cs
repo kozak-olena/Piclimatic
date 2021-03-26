@@ -40,7 +40,7 @@ namespace Piclimatic
         {
             try
             {
-                using var dht11 = new Dht11(4);
+                using var dht11 = new Dht11(24);
 
                 while (!CancellationToken.IsCancellationRequested)
                 {
@@ -67,7 +67,7 @@ namespace Piclimatic
 
         private static async Task ClickRelayContinuously()
         {
-            var pin = 24;
+            var pin = 4;
 
             try
             {
@@ -77,29 +77,16 @@ namespace Piclimatic
                 while (!CancellationToken.IsCancellationRequested)
                 {
                     controller.Write(pin, PinValue.Low);
-                    await Task.Delay(1000);
+                    await Task.Delay(5000);
 
                     controller.Write(pin, PinValue.High);
-                    await Task.Delay(2000);
+                    await Task.Delay(5000);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
             }
-        }
-
-        private static void RelayDemo()
-        {
-            var pin = 26;
-            using var controller = new GpioController();
-            controller.OpenPin(pin, PinMode.Output);
-
-
-            controller.Write(pin, PinValue.Low);
-            Thread.Sleep(1000);
-            controller.Write(pin, PinValue.High);
-            Thread.Sleep(1000);
         }
     }
 }
