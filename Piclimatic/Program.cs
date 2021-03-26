@@ -19,6 +19,7 @@ namespace Piclimatic
             CancellationToken = cancellationTokenSource.Token;
 
             var dht11PollTask = PollDht11Continuously();
+            var relayClickTask = ClickRelayContinuously();
 
             Console.WriteLine("Press Q to stop");
             do
@@ -32,6 +33,7 @@ namespace Piclimatic
             cancellationTokenSource.Cancel();
 
             await dht11PollTask;
+            await relayClickTask;
         }
 
         private static async Task PollDht11Continuously()
@@ -63,15 +65,40 @@ namespace Piclimatic
             }
         }
 
+        private static async Task ClickRelayContinuously()
+        {
+            var pin = 24;
+
+            try
+            {
+                using var controller = new GpioController();
+                controller.OpenPin(pin, PinMode.Output);
+
+                while (!CancellationToken.IsCancellationRequested)
+                {
+                    controller.Write(pin, PinValue.Low);
+                    await Task.Delay(1000);
+
+                    controller.Write(pin, PinValue.High);
+                    await Task.Delay(2000);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+
         private static void RelayDemo()
         {
             var pin = 26;
             using var controller = new GpioController();
             controller.OpenPin(pin, PinMode.Output);
 
-            controller.Write(pin, PinValue.High);
-            Thread.Sleep(1000);
+
             controller.Write(pin, PinValue.Low);
+            Thread.Sleep(1000);
+            controller.Write(pin, PinValue.High);
             Thread.Sleep(1000);
         }
     }
