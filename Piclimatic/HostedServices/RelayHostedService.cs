@@ -10,17 +10,21 @@ namespace Piclimatic
 {
     public class RelayHostedService : IHostedService
     {
+        private readonly ISynchronizer _synchronizer;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger<RelayHostedService> _logger;
 
         private Task _clickTask;
+        private bool _state = false;
 
         public RelayHostedService
         (
+            ISynchronizer synchronizer,
             IHostApplicationLifetime applicationLifetime,
             ILogger<RelayHostedService> logger
         )
         {
+            _synchronizer = synchronizer;
             _applicationLifetime = applicationLifetime;
             _logger = logger;
         }
@@ -41,18 +45,33 @@ namespace Piclimatic
         {
             var pin = 4;
 
+            using var controller = new GpioController();
+            controller.OpenPin(pin, PinMode.Output);
+
             try
             {
-                using var controller = new GpioController();
-                controller.OpenPin(pin, PinMode.Output);
 
                 while (!_applicationLifetime.ApplicationStopping.IsCancellationRequested)
                 {
-                    await Task.Delay(5000);
-                    controller.Write(pin, PinValue.Low);
+                    var requestedState = await _synchronizer.WhenRelayCommandPosted;
                     
-                    await Task.Delay(5000);
-                    controller.Write(pin, PinValue.High);
+                    if (_state != requestedState)
+                    {
+                        if (requestedState is true)
+                        {
+                            _logger.LogInformation($"Engaging relay");
+
+                            controller.Write(pin, PinValue.Low);
+                        }
+                        if (requestedState is false)
+                        {
+                            _logger.LogInformation($"Disengaging relay");
+                            
+                            controller.Write(pin, PinValue.High);
+                        }
+                    
+                        _state = requestedState;
+                    }
                 }
             }
             catch (Exception ex)

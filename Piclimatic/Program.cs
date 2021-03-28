@@ -7,8 +7,12 @@ namespace Piclimatic
 {
     class Program
     {
+        public static string BotToken;
+
         public static async Task Main(string[] args)
         {
+            BotToken = args[0];
+
             await CreateHostBuilder(args).Build().RunAsync();
         }
 
@@ -22,6 +26,9 @@ namespace Piclimatic
                         {
                             services.AddHostedService<Dht11HostedService>();
                             services.AddHostedService<RelayHostedService>();
+                            services.AddHostedService<TelegramBotHostedService>();
+
+                            services.AddSingleton<ISynchronizer, Synchronizer>();
                         }
                     );
 
