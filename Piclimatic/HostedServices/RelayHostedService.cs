@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Piclimatic
 {
-    public class RelayHostedService : IHostedService
+    class RelayHostedService : IHostedService
     {
-        private readonly ISynchronizer _synchronizer;
+        private readonly IEventHub _eventHub;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger<RelayHostedService> _logger;
 
@@ -19,12 +19,12 @@ namespace Piclimatic
 
         public RelayHostedService
         (
-            ISynchronizer synchronizer,
+            IEventHub eventHub,
             IHostApplicationLifetime applicationLifetime,
             ILogger<RelayHostedService> logger
         )
         {
-            _synchronizer = synchronizer;
+            _eventHub = eventHub;
             _applicationLifetime = applicationLifetime;
             _logger = logger;
         }
@@ -53,26 +53,30 @@ namespace Piclimatic
 
                 while (!_applicationLifetime.ApplicationStopping.IsCancellationRequested)
                 {
-                    var requestedState = await _synchronizer.WhenRelayCommandPosted(_applicationLifetime.ApplicationStopping);
+                    var command = await _eventHub.ReceiveRelayCommand(_applicationLifetime.ApplicationStopping);
                     
-                    if (_state != requestedState)
+                    if (_state != command.RequestedState)
                     {
-                        if (requestedState is true)
+                        if (command.RequestedState is true)
                         {
                             _logger.LogInformation($"Engaging relay");
 
                             controller.Write(pin, PinValue.Low);
                         }
-                        if (requestedState is false)
+                        if (command.RequestedState is false)
                         {
                             _logger.LogInformation($"Disengaging relay");
                             
                             controller.Write(pin, PinValue.High);
                         }
                     
-                        _state = requestedState;
+                        _state = command.RequestedState;
                     }
                 }
+            }
+            catch (OperationCanceledException) when (_applicationLifetime.ApplicationStopping.IsCancellationRequested)
+            {
+                _logger.LogInformation("Stopped listening for relay commands.");
             }
             catch (Exception ex)
             {

@@ -28,7 +28,7 @@ namespace Piclimatic
                             services.AddHostedService<RelayHostedService>();
                             services.AddHostedService<TelegramBotHostedService>();
 
-                            services.AddSingleton<ISynchronizer, Synchronizer>();
+                            services.AddSingleton<IEventHub, EventHub>();
                         }
                     );
 

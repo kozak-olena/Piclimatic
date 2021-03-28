@@ -11,20 +11,20 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Piclimatic
 {
-    public class TelegramBotHostedService : IHostedService
+    class TelegramBotHostedService : IHostedService
     {
-        private readonly ISynchronizer _synchronizer;
+        private readonly IEventHub _eventHub;
         private readonly ILogger<TelegramBotHostedService> _logger;
 
         private TelegramBotClient _botClient;
 
         public TelegramBotHostedService
         (
-            ISynchronizer synchronizer,
+            IEventHub eventHub,
             ILogger<TelegramBotHostedService> logger
         )
         {
-            _synchronizer = synchronizer;
+            _eventHub = eventHub;
             _logger = logger;
         }
 
@@ -54,17 +54,17 @@ namespace Piclimatic
                 {
                     response = "Turned on";
 
-                    _synchronizer.SignalRelay(true);
+                    _eventHub.PostRelayControlMessage(new RelayControlMessage(true));
                 }
                 else if (string.Equals(e.CallbackQuery.Data, "turnOff"))
                 {
                     response = "Turned off";
 
-                    _synchronizer.SignalRelay(false);
+                    _eventHub.PostRelayControlMessage(new RelayControlMessage(false));
                 }
                 else
                 {
-                    response = "Unknown action. Try again.";
+                    response = "Unknown action. Try again";
                 }
 
                 await _botClient.SendTextMessageAsync(chatId: e.CallbackQuery.From.Id, text: response);
@@ -79,27 +79,38 @@ namespace Piclimatic
         {
             try
             {
-                await _botClient.SendTextMessageAsync
-                (
-                    chatId: e.Message.Chat,
-                    text: "Choose action below",
-                    disableNotification: true,
-                    replyMarkup:
-                        new InlineKeyboardMarkup
-                        (
-                            new[]
-                            {
-                                InlineKeyboardButton.WithCallbackData("Turn on", "turnOn"),
-                                InlineKeyboardButton.WithCallbackData("Turn off", "turnOff"),
-                            }
-                        )
-                );
-
+                await SendMessage(null, e.Message.Chat.Id);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to handle message");
             }
+        }
+
+        private async Task SendMessage(string additionalInfoForUser, long chatId)
+        {
+            var defaultText = "Choose action below";
+
+            var text =
+                string.IsNullOrEmpty(additionalInfoForUser)
+                    ? string.Concat(additionalInfoForUser, ". ", defaultText)
+                    : defaultText;
+
+            await _botClient.SendTextMessageAsync
+            (
+                chatId: chatId,
+                text: text,
+                disableNotification: true,
+                replyMarkup:
+                    new InlineKeyboardMarkup
+                    (
+                        new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData("Turn on", "turnOn"),
+                            InlineKeyboardButton.WithCallbackData("Turn off", "turnOff"),
+                        }
+                    )
+            );
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
