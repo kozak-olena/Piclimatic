@@ -53,7 +53,7 @@ namespace Piclimatic
 
                 while (!_applicationLifetime.ApplicationStopping.IsCancellationRequested)
                 {
-                    var requestedState = await _synchronizer.WhenRelayCommandPosted;
+                    var requestedState = await _synchronizer.WhenRelayCommandPosted(_applicationLifetime.ApplicationStopping);
                     
                     if (_state != requestedState)
                     {

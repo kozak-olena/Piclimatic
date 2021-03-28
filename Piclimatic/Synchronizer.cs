@@ -21,6 +21,9 @@ namespace Piclimatic
             _relayControlBufferBlock.Post(requestedState);
         }
 
-        public Task<bool> WhenRelayCommandPosted => _relayControlBufferBlock.ReceiveAsync();
+        public Task<bool> WhenRelayCommandPosted(CancellationToken cancellationToken)
+        {
+            return _relayControlBufferBlock.ReceiveAsync(cancellationToken);
+        }
     }
 }
