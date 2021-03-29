@@ -61,7 +61,7 @@ namespace Piclimatic
 
                         if (LastSuccessfulRead != temperature)
                         {
-                            _eventHub.PostTemperatureChangedMessage(new TemperatureChangedMessage(LastSuccessfulRead.DegreesCelsius, temperature.DegreesCelsius));
+                            _eventHub.PostTemperatureChangedMessage(new TemperatureMeasurementMessage(temperature.DegreesCelsius));
 
                             LastSuccessfulRead = temperature;
                         }

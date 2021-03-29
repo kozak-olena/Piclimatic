@@ -7,12 +7,12 @@ namespace Piclimatic
     class EventHub : IEventHub
     {
         private readonly BufferBlock<RelayControlMessage> _relayControlBufferBlock;
-        private readonly BufferBlock<TemperatureChangedMessage> _temperatureChangedBufferBlock;
+        private readonly BroadcastBlock<TemperatureMeasurementMessage> _temperatureChangedBroadcastBlock;
 
         public EventHub()
         {
             _relayControlBufferBlock = new BufferBlock<RelayControlMessage>();
-            _temperatureChangedBufferBlock = new BufferBlock<TemperatureChangedMessage>();
+            _temperatureChangedBroadcastBlock = new BroadcastBlock<TemperatureMeasurementMessage>(cloningFunction: null);
         }
 
         public void PostRelayControlMessage(RelayControlMessage message)
@@ -25,14 +25,14 @@ namespace Piclimatic
             return _relayControlBufferBlock.ReceiveAsync(cancellationToken);
         }
 
-        public void PostTemperatureChangedMessage(TemperatureChangedMessage message)
+        public void PostTemperatureChangedMessage(TemperatureMeasurementMessage message)
         {
-            _temperatureChangedBufferBlock.Post(message);
+            _temperatureChangedBroadcastBlock.Post(message);
         }
 
-        public Task<TemperatureChangedMessage> ReceiveTemperatureChangedEvent(CancellationToken cancellationToken)
+        public Task<TemperatureMeasurementMessage> ReceiveTemperatureChangedEvent(CancellationToken cancellationToken)
         {
-            return _temperatureChangedBufferBlock.ReceiveAsync(cancellationToken);
+            return _temperatureChangedBroadcastBlock.ReceiveAsync(cancellationToken);
         }
     }
 }
