@@ -7,8 +7,6 @@ using Iot.Device.DHTxx;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using UnitsNet;
-
 namespace Piclimatic
 {
     class Dht11HostedService : IHostedService
@@ -18,7 +16,6 @@ namespace Piclimatic
         private readonly ILogger<Dht11HostedService> _logger;
 
         private Task _pollTask;
-        private Temperature LastSuccessfulRead;
 
         public Dht11HostedService
         (
@@ -59,12 +56,7 @@ namespace Piclimatic
                     {
                         _logger.LogTrace($"H = {humidity}, T = {temperature}");
 
-                        if (LastSuccessfulRead != temperature)
-                        {
-                            _eventHub.PostTemperatureChangedMessage(new TemperatureMeasurementMessage(temperature.DegreesCelsius));
-
-                            LastSuccessfulRead = temperature;
-                        }
+                        _eventHub.PostTemperatureMeasurement(new TemperatureMeasurementMessage(temperature.DegreesCelsius));
 
                         await Task.Delay(10000);
                     }

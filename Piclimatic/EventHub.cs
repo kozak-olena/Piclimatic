@@ -25,7 +25,7 @@ namespace Piclimatic
             return _relayControlBufferBlock.ReceiveAsync(cancellationToken);
         }
 
-        public void PostTemperatureChangedMessage(TemperatureMeasurementMessage message)
+        public void PostTemperatureMeasurement(TemperatureMeasurementMessage message)
         {
             _temperatureChangedBroadcastBlock.Post(message);
         }

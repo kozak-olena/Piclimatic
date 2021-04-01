@@ -8,7 +8,7 @@ namespace Piclimatic
         void PostRelayControlMessage(RelayControlMessage message);
         Task<RelayControlMessage> ReceiveRelayCommand(CancellationToken cancellationToken);
 
-        void PostTemperatureChangedMessage(TemperatureMeasurementMessage message);
+        void PostTemperatureMeasurement(TemperatureMeasurementMessage message);
         Task<TemperatureMeasurementMessage> ReceiveTemperatureChangedEvent(CancellationToken cancellationToken);
     }
 }
