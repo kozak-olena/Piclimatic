@@ -54,7 +54,7 @@ namespace Piclimatic
 
                     if (dht11.IsLastReadSuccessful)
                     {
-                        _logger.LogTrace($"H = {humidity}, T = {temperature}");
+                        _logger.LogInformation($"H = {humidity}, T = {temperature}");
 
                         _eventHub.PostTemperatureMeasurement(new TemperatureMeasurementMessage(temperature.DegreesCelsius));
 

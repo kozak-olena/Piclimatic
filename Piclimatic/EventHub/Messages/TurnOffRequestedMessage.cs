@@ -1,0 +1,6 @@
+﻿namespace Piclimatic
+{
+    class TurnOffRequestedMessage
+    {
+    }
+}

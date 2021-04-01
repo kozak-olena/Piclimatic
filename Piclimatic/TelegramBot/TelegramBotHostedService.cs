@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,8 @@ namespace Piclimatic
     class TelegramBotHostedService : IHostedService
     {
         private readonly IEventHub _eventHub;
+        private readonly IConfiguration _configuration;
+        private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger<TelegramBotHostedService> _logger;
 
         private TelegramBotClient _botClient;
@@ -52,23 +55,38 @@ namespace Piclimatic
         public TelegramBotHostedService
         (
             IEventHub eventHub,
+            IConfiguration configuration,
+            IHostApplicationLifetime applicationLifetime,
             ILogger<TelegramBotHostedService> logger
         )
         {
             _eventHub = eventHub;
+            _configuration = configuration;
+            _applicationLifetime = applicationLifetime;
             _logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            var botClient = new TelegramBotClient(Program.BotToken);
+            var botToken = _configuration["botToken"];
 
-            botClient.OnMessage += BotClient_OnMessage;
-            botClient.OnCallbackQuery += BotClient_OnCallbackQuery;
+            if (string.IsNullOrEmpty(botToken))
+            {
+                _logger.LogError("Telegram Bot token was not specified as command-line argument. Please make sure to include '--botToken \"...\"' ");
 
-            botClient.StartReceiving();
+                _applicationLifetime.StopApplication();
+            }
+            else
+            {
+                var botClient = new TelegramBotClient(botToken);
 
-            _botClient = botClient;
+                botClient.OnMessage += BotClient_OnMessage;
+                botClient.OnCallbackQuery += BotClient_OnCallbackQuery;
+
+                botClient.StartReceiving();
+
+                _botClient = botClient;
+            }
 
             return Task.CompletedTask;
         }
@@ -101,6 +119,18 @@ namespace Piclimatic
 
         private async Task HandleMessage(string text, long chatId)
         {
+            if (!IsChatIdAuthorized(chatId))
+            {
+                await _botClient.SendTextMessageAsync
+                (
+                    chatId: chatId,
+                    text: $"You are not authorized to use this bot. (chatId: {chatId})",
+                    disableNotification: true
+                );
+
+                return;
+            }
+
             bool resposeNeeded = true;
 
             TelegramBotState oldState = _state;
@@ -116,8 +146,9 @@ namespace Piclimatic
             {
                 if (int.TryParse(text, out var desiredTemperature) && 18 <= desiredTemperature && desiredTemperature <= 26)
                 {
-                    //TODO: store desired temperature
                     _state = TelegramBotState.ThermostatOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateThermostatTurnOnRequestedMessage(desiredTemperature));
                 }
             }
             else if (_state == TelegramBotState.ThermostatOn)
@@ -128,8 +159,9 @@ namespace Piclimatic
             {
                 if (int.TryParse(text, out var desiredDuration) && 1 <= desiredDuration && desiredDuration <= 120)
                 {
-                    //TODO: store desired duration
                     _state = TelegramBotState.TurnedOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateTimedTurnOnRequestedMessage(TimeSpan.FromMinutes(desiredDuration)));
                 }
             }
             else if (_state == TelegramBotState.TurnedOn)
@@ -151,6 +183,11 @@ namespace Piclimatic
 
         private async Task HandleCallback(string data, long chatId)
         {
+            if (!IsChatIdAuthorized(chatId))
+            {
+                return;
+            }
+
             var dataParts = data.Split('_');
 
             if (!dataParts[1].Equals(_lastMessageIdentifier.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -183,18 +220,21 @@ namespace Piclimatic
             {
                 if (command.Equals("setThermostat20"))
                 {
-                    //TODO: store desired temperature
                     _state = TelegramBotState.ThermostatOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateThermostatTurnOnRequestedMessage(20));
                 }
                 else if (command.Equals("setThermostat22"))
                 {
-                    //TODO: store desired temperature
                     _state = TelegramBotState.ThermostatOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateThermostatTurnOnRequestedMessage(22));
                 }
                 else if (command.Equals("setThermostat24"))
                 {
-                    //TODO: store desired temperature
                     _state = TelegramBotState.ThermostatOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateThermostatTurnOnRequestedMessage(24));
                 }
                 else if (command.Equals("cancel"))
                 {
@@ -209,18 +249,21 @@ namespace Piclimatic
             {
                 if (command.Equals("turnOn30"))
                 {
-                    //TODO: store desired duration
                     _state = TelegramBotState.TurnedOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateTimedTurnOnRequestedMessage(TimeSpan.FromMinutes(30)));
                 }
                 else if (command.Equals("turnOn60"))
                 {
-                    //TODO: store desired duration
                     _state = TelegramBotState.TurnedOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateTimedTurnOnRequestedMessage(TimeSpan.FromMinutes(60)));
                 }
                 else if (command.Equals("turnOn120"))
                 {
-                    //TODO: store desired duration
                     _state = TelegramBotState.TurnedOn;
+
+                    _eventHub.PostTurnOnRequestedMessage(TurnOnRequestedMessage.CreateTimedTurnOnRequestedMessage(TimeSpan.FromMinutes(120)));
                 }
                 else if (command.Equals("cancel"))
                 {
@@ -255,6 +298,13 @@ namespace Piclimatic
             }
         }
 
+        private bool IsChatIdAuthorized(long chatId)
+        {
+            var requiredChatId = _configuration["chatId"];
+
+            return string.Equals(requiredChatId, chatId.ToString());
+        }
+
         private async Task SendMessage(TelegramBotState oldState, TelegramBotState newState, long chatId, Guid messageIdentifier)
         {
             var text = _stateTransitionMessages[(oldState, newState)];
@@ -272,7 +322,7 @@ namespace Piclimatic
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _botClient.StopReceiving();
+            _botClient?.StopReceiving();
 
             return Task.CompletedTask;
         }
