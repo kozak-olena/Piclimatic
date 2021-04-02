@@ -42,10 +42,10 @@ namespace Piclimatic
             new Dictionary<(TelegramBotState, TelegramBotState), string>
             {
                 { (TelegramBotState.Default, TelegramBotState.Default), "Choose desired operational mode." },
-                { (TelegramBotState.Default, TelegramBotState.InitiatingThermostat), "Please set desired temperature (in °C) by selecting predefined option below or entering a custom value (from 18 to 26 °C)." },
+                { (TelegramBotState.Default, TelegramBotState.InitiatingThermostat), "Please set desired temperature (in °C) by selecting predefined option below or entering a custom value (from 18 to 30 °C)." },
                 { (TelegramBotState.Default, TelegramBotState.InitiatingTurnOn), "Please set desired duration (in minutes) by selecting predefined option below or entering a custom value (from 1 to 120 minutes)." },
                 { (TelegramBotState.InitiatingThermostat, TelegramBotState.Default), "Choose desired operational mode." },
-                { (TelegramBotState.InitiatingThermostat, TelegramBotState.InitiatingThermostat), "Invalid input. Please set desired temperature (in °C) by selecting predefined option below or entering a custom value (from 18 to 26 °C)." },
+                { (TelegramBotState.InitiatingThermostat, TelegramBotState.InitiatingThermostat), "Invalid input. Please set desired temperature (in °C) by selecting predefined option below or entering a custom value (from 18 to 30 °C)." },
                 { (TelegramBotState.InitiatingThermostat, TelegramBotState.ThermostatOn), "Thermostat activated. Your desired temperature will be maintained automatically. To deactivate thermostat use a button below." },
                 { (TelegramBotState.ThermostatOn, TelegramBotState.Default), "Thermostat deactivated. Choose desired operational mode." },
                 { (TelegramBotState.InitiatingTurnOn, TelegramBotState.Default), "Choose desired operational mode." },
@@ -195,7 +195,7 @@ namespace Piclimatic
             }
             else if (_state == TelegramBotState.InitiatingThermostat)
             {
-                if (int.TryParse(text, out var desiredTemperature) && 18 <= desiredTemperature && desiredTemperature <= 26)
+                if (int.TryParse(text, out var desiredTemperature) && 18 <= desiredTemperature && desiredTemperature <= 30)
                 {
                     _state = TelegramBotState.ThermostatOn;
 
