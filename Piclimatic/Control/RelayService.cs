@@ -31,7 +31,7 @@ namespace Piclimatic
             {
                 _logger.LogInformation($"Engaging relay");
 
-                _gpioController.Write(_pin, PinValue.Low);
+                _gpioController.Write(_pin, PinValue.High);
 
                 _state = false;
             }
@@ -39,12 +39,11 @@ namespace Piclimatic
 
         public void TurnOn()
         {
-
             if (_state is false)
             {
                 _logger.LogInformation($"Disengaging relay");
 
-                _gpioController.Write(_pin, PinValue.High);
+                _gpioController.Write(_pin, PinValue.Low);
 
                 _state = true;
             }
