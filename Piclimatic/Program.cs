@@ -7,8 +7,6 @@ namespace Piclimatic
 {
     class Program
     {
-        public static string BotToken;
-
         public static async Task Main(string[] args)
         {
             await CreateHostBuilder(args).Build().RunAsync();

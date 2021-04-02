@@ -8,6 +8,7 @@ namespace Piclimatic
     {
         private readonly BufferBlock<TurnOnRequestedMessage> _turnOnRequestBufferBlock;
         private readonly BufferBlock<TurnOffRequestedMessage> _turnOffRequestBufferBlock;
+        private readonly BufferBlock<TimedTurnOffNotificationMessage> _timedTurnOffNotificationBufferBlock;
         
         private readonly BroadcastBlock<TemperatureMeasurementMessage> _temperatureChangedBroadcastBlock;
 
@@ -15,6 +16,7 @@ namespace Piclimatic
         {
             _turnOnRequestBufferBlock = new BufferBlock<TurnOnRequestedMessage>();
             _turnOffRequestBufferBlock = new BufferBlock<TurnOffRequestedMessage>();
+            _timedTurnOffNotificationBufferBlock = new BufferBlock<TimedTurnOffNotificationMessage>();
 
             _temperatureChangedBroadcastBlock = new BroadcastBlock<TemperatureMeasurementMessage>(cloningFunction: null);
         }
@@ -48,5 +50,15 @@ namespace Piclimatic
         {
             return _turnOffRequestBufferBlock.ReceiveAsync(cancellationToken);
         }
+
+        public void PostTimedTurnOffNotificationMessage(TimedTurnOffNotificationMessage message)
+        {
+            _timedTurnOffNotificationBufferBlock.Post(message);
+        }
+
+        public Task<TimedTurnOffNotificationMessage> ReceiveTimedTurnOffNotificationMessage(CancellationToken cancellationToken)
+        {
+            return _timedTurnOffNotificationBufferBlock.ReceiveAsync(cancellationToken);
+        }        
     }
 }

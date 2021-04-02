@@ -23,6 +23,8 @@ namespace Piclimatic
 
         private TelegramBotClient _botClient;
 
+        private Task _timedTurnOffNotificationHandler;
+
         private TelegramBotState _state = TelegramBotState.Default;
         private Guid _lastMessageIdentifier;
 
@@ -69,26 +71,75 @@ namespace Piclimatic
         public Task StartAsync(CancellationToken cancellationToken)
         {
             var botToken = _configuration["botToken"];
+            var ownerChatId = _configuration["chatId"];
 
             if (string.IsNullOrEmpty(botToken))
             {
-                _logger.LogError("Telegram Bot token was not specified as command-line argument. Please make sure to include '--botToken \"...\"' ");
+                _logger.LogError("Telegram Bot token was not specified as command-line argument. Please make sure to include '--botToken \"...\"'.");
 
                 _applicationLifetime.StopApplication();
+
+                return Task.CompletedTask;
             }
-            else
+
+            if (string.IsNullOrEmpty(ownerChatId))
             {
-                var botClient = new TelegramBotClient(botToken);
+                if (long.TryParse(ownerChatId, out var ignored))
+                {
+                    _logger.LogWarning
+                    (
+                        "Owner chat id was not specified as command-line argument. " +
+                        "Running in chat id discovery mode, no one will be able to use the bot. " +
+                        "Please make sure to include '--chatId \"...\"'."
+                    );
+                }
+                else
+                {
+                    _logger.LogError("Specified chat id is invalid. Valid 'long' value needs to be provided.");
 
-                botClient.OnMessage += BotClient_OnMessage;
-                botClient.OnCallbackQuery += BotClient_OnCallbackQuery;
+                    _applicationLifetime.StopApplication();
 
-                botClient.StartReceiving();
-
-                _botClient = botClient;
+                    return Task.CompletedTask;
+                }
             }
+
+            _timedTurnOffNotificationHandler = HandleTimedTurnOffNotifications();
+
+            var botClient = new TelegramBotClient(botToken);
+
+            botClient.OnMessage += BotClient_OnMessage;
+            botClient.OnCallbackQuery += BotClient_OnCallbackQuery;
+
+            botClient.StartReceiving();
+
+            _botClient = botClient;
 
             return Task.CompletedTask;
+        }
+
+        private async Task HandleTimedTurnOffNotifications()
+        {
+            var cancellationToken = _applicationLifetime.ApplicationStopping;
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    await _eventHub.ReceiveTimedTurnOffNotificationMessage(cancellationToken);
+
+                    await SendMessage(_state, TelegramBotState.Default, _configuration.GetValue<long>("chatId"), false);
+
+                    _state = TelegramBotState.Default;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Stopped listening for events.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected failure.");
+            }
         }
 
         private async void BotClient_OnCallbackQuery(object sender, CallbackQueryEventArgs e)
@@ -101,7 +152,7 @@ namespace Piclimatic
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to handle callback query");
+                _logger.LogError(ex, "Failed to handle callback query.");
             }
         }
 
@@ -113,7 +164,7 @@ namespace Piclimatic
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to handle message");
+                _logger.LogError(ex, "Failed to handle message.");
             }
         }
 
@@ -175,9 +226,7 @@ namespace Piclimatic
 
             if (resposeNeeded)
             {
-                _lastMessageIdentifier = Guid.NewGuid();
-
-                await SendMessage(oldState, _state, chatId, _lastMessageIdentifier);
+                await SendMessage(oldState, _state, chatId);
             }
         }
 
@@ -279,6 +328,8 @@ namespace Piclimatic
                 if (command.Equals("turnOff"))
                 {
                     _state = TelegramBotState.Default;
+
+                    _eventHub.PostTurnOffRequestedMessage(new TurnOffRequestedMessage());
                 }
                 else
                 {
@@ -292,39 +343,39 @@ namespace Piclimatic
 
             if (resposeNeeded)
             {
-                _lastMessageIdentifier = Guid.NewGuid();
-
-                await SendMessage(oldState, _state, chatId, _lastMessageIdentifier);
+                await SendMessage(oldState, _state, chatId);
             }
         }
 
         private bool IsChatIdAuthorized(long chatId)
         {
-            var requiredChatId = _configuration["chatId"];
+            var requiredChatId = _configuration.GetValue<long>("chatId");
 
-            return string.Equals(requiredChatId, chatId.ToString());
+            return requiredChatId == chatId;
         }
 
-        private async Task SendMessage(TelegramBotState oldState, TelegramBotState newState, long chatId, Guid messageIdentifier)
+        private async Task SendMessage(TelegramBotState oldState, TelegramBotState newState, long chatId, bool disableNotification = true)
         {
+            _lastMessageIdentifier = Guid.NewGuid();
+
             var text = _stateTransitionMessages[(oldState, newState)];
 
-            var buttons = _stateButtons[newState].Select(x => InlineKeyboardButton.WithCallbackData(x.Text, $"{x.CallbackData}_{messageIdentifier}"));
+            var buttons = _stateButtons[newState].Select(x => InlineKeyboardButton.WithCallbackData(x.Text, $"{x.CallbackData}_{_lastMessageIdentifier}"));
 
             await _botClient.SendTextMessageAsync
             (
                 chatId: chatId,
                 text: text,
-                disableNotification: true,
+                disableNotification: disableNotification,
                 replyMarkup: new InlineKeyboardMarkup(buttons)
             );
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
             _botClient?.StopReceiving();
 
-            return Task.CompletedTask;
+            await _timedTurnOffNotificationHandler;
         }
     }
 }

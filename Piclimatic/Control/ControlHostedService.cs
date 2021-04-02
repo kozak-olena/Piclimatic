@@ -54,7 +54,28 @@ namespace Piclimatic
 
                     if (turnOnRequest.RequestedOperationalMode == OperationalMode.Timed)
                     {
-                        await Task.WhenAny(_eventHub.ReceiveTurnOffRequestedMessage(cancellationToken), Task.Delay(turnOnRequest.DesiredDuration, cancellationToken));
+                        CancellationTokenSource turnOffRequestAwaitCancellationTokenSource = new CancellationTokenSource();
+
+                        var turnOffRequestTask = 
+                            _eventHub.ReceiveTurnOffRequestedMessage
+                            (
+                                CancellationTokenSource.CreateLinkedTokenSource
+                                (
+                                    cancellationToken, 
+                                    turnOffRequestAwaitCancellationTokenSource.Token
+                                ).Token
+                            );
+
+                        var desiredTurnOnDurationElapsedTask = Task.Delay(turnOnRequest.DesiredDuration, cancellationToken);
+
+                        var completedTask = await Task.WhenAny(turnOffRequestTask, desiredTurnOnDurationElapsedTask);
+
+                        if (completedTask == desiredTurnOnDurationElapsedTask)
+                        {
+                            turnOffRequestAwaitCancellationTokenSource.Cancel();
+
+                            _eventHub.PostTimedTurnOffNotificationMessage(new TimedTurnOffNotificationMessage());
+                        }
                     }
 
                     if (turnOnRequest.RequestedOperationalMode == OperationalMode.Thermostat)
@@ -81,11 +102,11 @@ namespace Piclimatic
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Stopped listening for relay commands.");
+                _logger.LogInformation("Stopped listening for events.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected relay failure.");
+                _logger.LogError(ex, "Unexpected control failure.");
             }
         }
     }

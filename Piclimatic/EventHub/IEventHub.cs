@@ -13,5 +13,8 @@ namespace Piclimatic
 
         void PostTurnOffRequestedMessage(TurnOffRequestedMessage message);
         Task<TurnOffRequestedMessage> ReceiveTurnOffRequestedMessage(CancellationToken cancellationToken);
+
+        void PostTimedTurnOffNotificationMessage(TimedTurnOffNotificationMessage message);
+        Task<TimedTurnOffNotificationMessage> ReceiveTimedTurnOffNotificationMessage(CancellationToken cancellationToken);
     }
 }
