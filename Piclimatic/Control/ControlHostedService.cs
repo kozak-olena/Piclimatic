@@ -92,7 +92,7 @@ namespace Piclimatic
 
                             var temperatureMeasurement = await _eventHub.ReceiveTemperatureMeasurement(cancellationToken);
 
-                            if (turnOnRequest.DesiredTemperature < temperatureMeasurement.Temperature)
+                            if (temperatureMeasurement.Temperature < turnOnRequest.DesiredTemperature)
                             {
                                 _relayService.TurnOn();
                             }
