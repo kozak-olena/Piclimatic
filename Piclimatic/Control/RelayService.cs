@@ -20,6 +20,8 @@ namespace Piclimatic
 
             _gpioController = new GpioController();
             _gpioController.OpenPin(_pin, PinMode.Output);
+            _gpioController.Write(_pin, PinValue.High);
+
             _logger = logger;
         }
 
