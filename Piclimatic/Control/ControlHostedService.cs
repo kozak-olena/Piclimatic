@@ -72,6 +72,8 @@ namespace Piclimatic
 
                         var completedTask = await Task.WhenAny(turnOffRequestTask, desiredTurnOnDurationElapsedTask);
 
+                        _relayService.TurnOff();
+
                         if (completedTask == desiredTurnOnDurationElapsedTask)
                         {
                             turnOffRequestAwaitCancellationTokenSource.Cancel();
