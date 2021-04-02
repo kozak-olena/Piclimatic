@@ -54,6 +54,8 @@ namespace Piclimatic
 
                     if (turnOnRequest.RequestedOperationalMode == OperationalMode.Timed)
                     {
+                        _relayService.TurnOn();
+
                         CancellationTokenSource turnOffRequestAwaitCancellationTokenSource = new CancellationTokenSource();
 
                         var turnOffRequestTask = 
