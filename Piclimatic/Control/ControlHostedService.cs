@@ -101,6 +101,8 @@ namespace Piclimatic
                                 _relayService.TurnOff();
                             }
                         }
+
+                        _relayService.TurnOff();
                     }
                 }
             }
