@@ -84,16 +84,16 @@ namespace Piclimatic
 
             if (string.IsNullOrEmpty(ownerChatId))
             {
-                if (long.TryParse(ownerChatId, out var ignored))
-                {
-                    _logger.LogWarning
-                    (
-                        "Owner chat id was not specified as command-line argument. " +
-                        "Running in chat id discovery mode, no one will be able to use the bot. " +
-                        "Please make sure to include '--chatId \"...\"'."
-                    );
-                }
-                else
+                _logger.LogWarning
+                (
+                    "Owner chat id was not specified as command-line argument. " +
+                    "Running in chat id discovery mode, no one will be able to use the bot. " +
+                    "Please make sure to include '--chatId \"...\"'."
+                );
+            }
+            else
+            {
+                if (!long.TryParse(ownerChatId, out var ignored))
                 {
                     _logger.LogError("Specified chat id is invalid. Valid 'long' value needs to be provided.");
 
@@ -375,7 +375,10 @@ namespace Piclimatic
         {
             _botClient?.StopReceiving();
 
-            await _timedTurnOffNotificationHandler;
+            if (_timedTurnOffNotificationHandler != null)
+            {
+                await _timedTurnOffNotificationHandler;
+            }
         }
     }
 }
